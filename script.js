@@ -1,5 +1,122 @@
 // ==========================================================================
+// Studio Nabastala — Splash Screen
+// Flickers rapidly through the studio's 7 services (each in a different
+// typeface — fast, editorial), decelerates, then crossfades straight into
+// the logo mark. Once loading is done, the logo grows and fades as the
+// whole panel slides up into the home screen — one continuous gesture.
+// ==========================================================================
+
+(function runSplash() {
+  const splash = document.getElementById('splash');
+  const textEl = document.getElementById('splashText');
+  if (!splash || !textEl) return;
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.body.classList.add('splash-active');
+
+  const SERVICE_TEXTS = [
+    'Brand Strategy & Identity',
+    'Content & Campaigns',
+    'Design & Visual Communication',
+    'Photography & Video',
+    'Executive Presentations',
+    'Digital Experiences',
+    'AI Creative Systems'
+  ];
+  const FLICKER_FONTS = [
+    "'Cormorant Garamond', serif",
+    "'Space Grotesk', sans-serif",
+    "'Bodoni Moda', serif",
+    "'Unbounded', sans-serif",
+    "'DM Mono', monospace",
+    "'Playfair Display', serif",
+    "'Big Shoulders Display', sans-serif",
+    "'Instrument Serif', serif"
+  ];
+  const FLICKER_MS = 180;
+  const SETTLE_DELAYS = [260, 340, 440, 580, 720];
+  const MIN_DURATION_MS = prefersReducedMotion ? 200 : 1900;
+
+  let stepIndex = 0;
+  let settling = false;
+  let settleStep = 0;
+  let timeoutId = null;
+
+  function paintStep() {
+    textEl.textContent = SERVICE_TEXTS[stepIndex % SERVICE_TEXTS.length];
+    textEl.style.fontFamily = FLICKER_FONTS[stepIndex % FLICKER_FONTS.length];
+    stepIndex++;
+  }
+
+  function tick() {
+    if (!settling) {
+      paintStep();
+      timeoutId = setTimeout(tick, FLICKER_MS);
+      return;
+    }
+
+    if (settleStep < SETTLE_DELAYS.length) {
+      paintStep();
+      timeoutId = setTimeout(tick, SETTLE_DELAYS[settleStep]);
+      settleStep++;
+      return;
+    }
+
+    showLogo();
+  }
+
+  function showLogo() {
+    splash.classList.add('is-logo');
+    // Logo finishes fading in at ~1s (0.4s delay + 0.6s transition) — hold
+    // briefly after that before zooming away, so it actually reads.
+    setTimeout(zoomAndFinish, 1300);
+  }
+
+  function zoomAndFinish() {
+    // Logo grows and fades while the panel slides up — one continuous
+    // push through the mark into the home screen, not two separate beats.
+    splash.classList.add('is-zoom');
+    splash.classList.add('is-done');
+    document.body.classList.remove('splash-active');
+    // Let the rest of the page's own entrance animations (headline cycle,
+    // scroll reveals, etc.) start right as the splash begins its exit,
+    // instead of having been silently running underneath it the whole time.
+    document.dispatchEvent(new CustomEvent('studio:splashComplete'));
+    setTimeout(() => splash.remove(), 950);
+  }
+
+  if (prefersReducedMotion) {
+    // No flicker, but still hold briefly on the studio's own name before
+    // handing off — otherwise the logo would appear with zero build-up.
+    textEl.textContent = 'Studio Nabastala';
+    textEl.style.fontFamily = "'Cormorant Garamond', serif";
+  } else {
+    tick();
+  }
+
+  const minDurationPromise = new Promise((resolve) => setTimeout(resolve, MIN_DURATION_MS));
+  const pageLoadPromise = document.readyState === 'complete'
+    ? Promise.resolve()
+    : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
+  const fontsReadyPromise = (document.fonts && document.fonts.ready)
+    ? document.fonts.ready
+    : Promise.resolve();
+
+  Promise.all([minDurationPromise, pageLoadPromise, fontsReadyPromise]).then(() => {
+    if (prefersReducedMotion) {
+      showLogo();
+    } else {
+      settling = true;
+    }
+  });
+})();
+
+// ==========================================================================
 // Studio Nabastala — Headline Cycling Animation
+// Waits for the splash screen to actually finish before the interval
+// starts counting — otherwise it keeps ticking underneath the splash and
+// the visitor lands mid-cycle, missing the earlier headlines entirely.
 // ==========================================================================
 
 const stage = document.getElementById('headlineStage');
@@ -20,10 +137,23 @@ function showNextHeadline() {
   setStageHeight(headlines[current]);
 }
 
-window.addEventListener('load', () => setStageHeight(headlines[current]));
-window.addEventListener('resize', () => setStageHeight(headlines[current]));
+function startHeadlineCycle() {
+  if (!stage || !headlines.length) return;
+  setStageHeight(headlines[current]);
+  setInterval(showNextHeadline, CYCLE_INTERVAL_MS);
+}
 
-setInterval(showNextHeadline, CYCLE_INTERVAL_MS);
+window.addEventListener('resize', () => {
+  if (headlines.length) setStageHeight(headlines[current]);
+});
+
+const splashEl = document.getElementById('splash');
+if (splashEl) {
+  document.addEventListener('studio:splashComplete', startHeadlineCycle, { once: true });
+} else {
+  // No splash present for some reason — start right away.
+  startHeadlineCycle();
+}
 
 
 // ==========================================================================

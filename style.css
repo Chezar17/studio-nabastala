@@ -24,6 +24,108 @@ body {
   overflow-x: hidden;
 }
 
+body.splash-active {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* --------------------------------------------------------------------------
+   Splash Screen
+   A single line of "Studio Nabastala" flickers rapidly through a stack of
+   very different typefaces — the studio's range on display as a kind of
+   typographic warm-up — then decelerates and settles into the brand's own
+   serif before crossfading into the mark itself. Once loading is done the
+   whole panel slides up and off, same seamless "curtain" language used for
+   the work → contact transition, uncovering the hero underneath.
+   -------------------------------------------------------------------------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dark);
+  transition: opacity 0.9s cubic-bezier(0.65, 0, 0.35, 1), transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: opacity, transform;
+}
+
+.splash.is-done {
+  opacity: 0;
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+.splash-inner {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  padding: 0 32px;
+  text-align: center;
+}
+
+.splash-text {
+  display: block;
+  font-size: clamp(24px, 5.6vw, 58px);
+  font-weight: 500;
+  line-height: 1.18;
+  color: var(--cream);
+  white-space: normal;
+  animation: splashFlicker 0.16s steps(2) infinite;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.splash.is-logo .splash-text {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.splash-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: 620px;
+  width: 68vw;
+  height: auto;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.88);
+  /* Delayed so it only starts fading in once the flickering text above
+     has fully disappeared — the two are both readable text, so they must
+     never overlap in time or they collide into an unreadable mess. */
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s;
+  pointer-events: none;
+}
+
+.splash.is-logo .splash-logo {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Fires alongside .is-done: the logo keeps growing and fades out as the
+   whole panel slides up, reading as one continuous push through the mark
+   into the home screen rather than two separate beats. */
+.splash.is-zoom .splash-logo {
+  transition: opacity 0.85s cubic-bezier(0.65, 0, 0.35, 1), transform 0.85s cubic-bezier(0.65, 0, 0.35, 1);
+  transform: translate(-50%, -50%) scale(1.6);
+  opacity: 0;
+}
+
+@keyframes splashFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash-text,
+  .splash-logo {
+    transition-duration: 0.25s !important;
+    animation: none !important;
+  }
+}
+
+
 /* --------------------------------------------------------------------------
    Hero Container
    -------------------------------------------------------------------------- */
